@@ -28,7 +28,7 @@ public class DruidDataSourceConfiguration {
 
     @Bean
     @ConfigurationProperties("spring.druid.datasource")
-   // @Primary
+    @Primary
     public DruidDataSource dataSource(
             DataSourceProperties properties) throws Exception{
         DruidDataSource dataSource = new DruidDataSource();
