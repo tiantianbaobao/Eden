@@ -1,5 +1,7 @@
 package com.account.consumerservice.core.service;
 
+import com.account.consumerservice.annotation.anno.ReadDataSource;
+import com.account.consumerservice.annotation.anno.WriteDataSource;
 import com.account.consumerservice.core.dao.UserInfoDao;
 import com.account.consumerservice.domain.UserInfo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +23,16 @@ public class UserInfoService {
     public UserInfoService(UserInfoDao userInfoDao){
         this.userInfoDao = userInfoDao;
     }
-    public UserInfo getUserInfo(int id){
+    @ReadDataSource
+    public UserInfo getUserInfoFromSlave(int id){
         return userInfoDao.getUserInfo(id);
     }
+
+    @WriteDataSource
+    public UserInfo getUserInfoFromMaster(int id){
+        return userInfoDao.getUserInfo(id);
+    }
+
     public boolean saveUserInfo(UserInfo info){
         return userInfoDao.saveUserInfo(info)>0;
     }

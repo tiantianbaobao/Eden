@@ -22,8 +22,14 @@ public class ConsumerController {
     @Autowired
     private UserInfoService userInfoService;
 
-    @GetMapping("/info/{id}")
-    public String info(@PathVariable(name = "id") int id){
-        return userInfoService.getUserInfo(id).toString();
+    @GetMapping("/slave/{id}")
+    public String slaveInfo(@PathVariable(name = "id") int id){
+        return userInfoService.getUserInfoFromSlave(id).toString();
+    }
+
+    @GetMapping("/master/{id}")
+    public String masterInfo(@PathVariable(name = "id") int id){
+
+        return userInfoService.getUserInfoFromMaster(id).toString();
     }
 }

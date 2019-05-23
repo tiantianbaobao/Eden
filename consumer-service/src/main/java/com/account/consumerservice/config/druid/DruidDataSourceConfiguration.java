@@ -9,8 +9,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 
+import javax.sql.DataSource;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -20,17 +25,18 @@ import java.util.Properties;
  * @date 2019/5/22 - 14:11 -- 星期三
  */
 @Configuration
-@EnableConfigurationProperties(DruidSettings.class)
+@Import({DruidSettings.class,SlaveSettings.class})
 public class DruidDataSourceConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(DruidDataSourceConfiguration.class);
     @Autowired
     private DruidSettings druidSettings;
+    @Autowired
+    private SlaveSettings slaveSettings;
 
-    @Bean
-    @ConfigurationProperties("spring.druid.datasource")
+    @Bean("writeDataSource")
+    //@ConfigurationProperties("spring.druid.datasource")
     @Primary
-    public DruidDataSource dataSource(
-            DataSourceProperties properties) throws Exception{
+    public DruidDataSource masterDataSource() throws Exception{
         DruidDataSource dataSource = new DruidDataSource();
         dataSource.setDriverClassName(druidSettings.getDriverClassName());
         dataSource.setUrl(druidSettings.getUrl());
@@ -68,5 +74,53 @@ public class DruidDataSourceConfiguration {
         dataSource.setUseGlobalDataSourceStat(druidSettings.isUseGlobalDataSourceStat());
 
         return dataSource;
+    }
+
+    @Bean("readDataSource")
+    //@ConfigurationProperties("spring.slave.datasource")
+    public DruidDataSource slaverDataSource() throws Exception{
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.setDriverClassName(slaveSettings.getDriverClassName());
+        dataSource.setUrl(slaveSettings.getUrl());
+        dataSource.setUsername(slaveSettings.getUsername());
+        dataSource.setPassword(slaveSettings.getPassword());
+        dataSource.setInitialSize(slaveSettings.getInitialSize());
+        dataSource.setMinIdle(slaveSettings.getMinIdle());
+        dataSource.setMaxActive(slaveSettings.getMaxActive());
+        dataSource.setMaxWait(slaveSettings.getMaxWait());
+        dataSource.setTimeBetweenEvictionRunsMillis(slaveSettings.getTimeBetweenEvictionRunsMillis());
+        dataSource.setMinEvictableIdleTimeMillis(slaveSettings.getMinEvictableIdleTimeMillis());
+        String validationQuery = slaveSettings.getValidationQuery();
+        if (validationQuery != null && !"".equals(validationQuery)) {
+            dataSource.setValidationQuery(validationQuery);
+        }
+        dataSource.setTestWhileIdle(slaveSettings.isTestWhileIdle());
+        dataSource.setTestOnBorrow(slaveSettings.isTestOnBorrow());
+        dataSource.setTestOnReturn(slaveSettings.isTestOnReturn());
+        if(slaveSettings.isPoolPreparedStatements()){
+            dataSource.setMaxPoolPreparedStatementPerConnectionSize(slaveSettings.getMaxPoolPreparedStatementPerConnectionSize());
+        }
+        dataSource.setFilters(slaveSettings.getFilters());//这是最关键的,否则SQL监控无法生效
+        String connectionPropertiesStr = slaveSettings.getConnectionProperties();
+        if(connectionPropertiesStr != null && !"".equals(connectionPropertiesStr)){
+            Properties connectProperties = new Properties();
+            String[] propertiesList = connectionPropertiesStr.split(";");
+            for(String propertiesTmp:propertiesList){
+                String[] obj = propertiesTmp.split("=");
+                String key = obj[0];
+                String value = obj[1];
+                connectProperties.put(key,value);
+            }
+            dataSource.setConnectProperties(connectProperties);
+        }
+        dataSource.setUseGlobalDataSourceStat(slaveSettings.isUseGlobalDataSourceStat());
+
+        return dataSource;
+    }
+    @Bean(name="readDataSources")
+    public List<DataSource> slaveDataSources() throws Exception {
+        List<DataSource> list = new ArrayList<>();
+        list.add(slaverDataSource());
+        return  list;
     }
 }
